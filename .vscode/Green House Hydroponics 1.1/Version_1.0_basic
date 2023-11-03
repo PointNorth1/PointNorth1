@@ -1,0 +1,261 @@
+#include <ArduinoIoTCloud.h>
+#include <Arduino_ConnectionHandler.h>
+
+// Pin-Definitionen für Sensoren und Pumpen
+const int moistureSensor1Pin = A0;
+const int moistureSensor2Pin = A1;
+const int phSensorPin = A2;
+const int ecSensorPin = A3;
+const int waterTempSensorPin = A4;
+const int flowSensorPin = 2;
+const int mainTankPumpPin = 3;
+const int microPump1Pin = 5;
+const int microPump2Pin = 6;
+const int microPump3Pin = 7;
+const int irrigationPumpPin = 4;
+const int oxygenPumpPin = 9;
+const int enrichmentPumpPin = 8;
+
+// Variablen für die Cloud-Verbindung
+bool microPump1On = false;
+bool microPump2On = false;
+bool microPump3On = false;
+bool mainTankPumpOn = false;
+int irrigationIntensity = 0;
+bool oxygenPumpOn = false;
+int oxygenIntensity = 0;
+
+float flowRate = 0.0; // Gemessener Durchfluss in Litern pro Minute
+
+// Tanktiefe in cm (angepasst an deine tatsächlichen Tankabmessungen)
+const float tankDepth = 100.0; // Beispielwert
+const float minWaterLevelToPump = 1.0; // Mindestwasserstand im Nährstofftank, um zu pumpen (1 Liter)
+
+const int trigPin = 9; // Trigger-Pin des Ultraschallsensors
+const int echoPin = 10; // Echo-Pin des Ultraschallsensors
+
+unsigned long previousMillis = 0; // Zum Speichern der letzten Zeit, die die Aktion ausgeführt wurde
+const long interval = 60000; // Intervall in Millisekunden (60.000 ms = 1 Minute)
+
+bool pump1Activated = false; // Schalter für Mikropumpe 1 (pH Plus)
+bool pump2Activated = false; // Schalter für Mikropumpe 2 (pH Minus)
+bool pump3Activated = false; // Schalter für Mikropumpe 3 (Dünger)
+bool mainTankPumpActivated = false; // Schalter für Haupttank-Pumpe
+
+void onMoistureThresholdChange() {
+  int newMoistureThreshold = ArduinoIoTCloud.getProperty(moistureThreshold);
+  // Deine Bewässerungslogik anpassen
+}
+
+void onECThresholdChange() {
+  float newECLowerThreshold = ArduinoIoTCloud.getProperty(ecLowerThreshold);
+  float newECUpperThreshold = ArduinoIoTCloud.getProperty(ecUpperThreshold);
+  // Deine Regelungen basierend auf EC-Werten anpassen
+}
+
+void onPHThresholdChange() {
+  float newPHLowerThreshold = ArduinoIoTCloud.getProperty(phLowerThreshold);
+  float newPHUpperThreshold = ArduinoIoTCloud.getProperty(phUpperThreshold);
+  // Deine Regelungen basierend auf pH-Werten anpassen
+}
+
+void pumpWaterToNutrientTank() {
+  float waterLevelLiters = calculateWaterLevel();
+
+// Überprüfe den Wasserstand im Nährstofftank
+  if (waterLevelLiters <= minWaterLevelToPump) {
+// Schalte die Haupttank-Pumpe ein
+    digitalWrite(mainTankPumpPin, HIGH);
+  } else if (waterLevelLiters >= 11.0) {
+// Schalte die Haupttank-Pumpe aus, wenn 11 Liter erreicht sind
+    digitalWrite(mainTankPumpPin, LOW);
+  }
+}
+void setup() {
+  pinMode(moistureSensor1Pin, INPUT);
+  pinMode(moistureSensor2Pin, INPUT);
+  pinMode(phSensorPin, INPUT);
+  pinMode(ecSensorPin, INPUT);
+  pinMode(waterTempSensorPin, INPUT);
+  pinMode(flowSensorPin, INPUT);
+attachInterrupt(digitalPinToInterrupt(flowSensorPin), updateFlow, RISING);
+  pinMode(mainTankPumpPin, OUTPUT);
+  digitalWrite(mainTankPumpPin, LOW); // Starte die Pumpe ausgeschaltet
+  pinMode(microPump1Pin, OUTPUT);
+  pinMode(microPump2Pin, OUTPUT);
+  pinMode(microPump3Pin, OUTPUT);
+  pinMode(irrigationPumpPin, OUTPUT);
+  pinMode(oxygenPumpPin, OUTPUT);
+
+// Initialisiere den Ultraschallsensor
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  ArduinoIoTCloud.begin(ArduinoIoTPreferredConnection);
+  ArduinoCloud.setPropertyChangedHandler(moistureThreshold, onMoistureThresholdChange);
+  ArduinoCloud.setPropertyChangedHandler(ecLowerThreshold, onECThresholdChange);
+  ArduinoCloud.setPropertyChangedHandler(ecUpperThreshold, onECThresholdChange);
+  ArduinoCloud.setPropertyChangedHandler(phLowerThreshold, onPHThresholdChange);
+  ArduinoCloud.setPropertyChangedHandler(phUpperThreshold, onPHThresholdChange);
+
+
+  digitalWrite(mainTankPumpPin, LOW);
+  digitalWrite(microPump1Pin, LOW);
+  digitalWrite(microPump2Pin, LOW);
+  digitalWrite(microPump3Pin, LOW);
+  digitalWrite(irrigationPumpPin, LOW);
+  digitalWrite(oxygenPumpPin, LOW);
+
+  // Initialisiere die Arduino IoT Cloud Verbindung
+  // ...
+  
+  // Füge deine Cloud Eigenschaften hinzu
+  ArduinoCloud.addProperty(microPump1On, READWRITE, ON_CHANGE, onMicroPump1Change);
+  ArduinoCloud.addProperty(microPump2On, READWRITE, ON_CHANGE, onMicroPump2Change);
+  ArduinoCloud.addProperty(microPump3On, READWRITE, ON_CHANGE, onMicroPump3Change);
+
+  ArduinoCloud.setPropertyChangedHandler(pump1, onPump1Change);
+  ArduinoCloud.setPropertyChangedHandler(pump2, onPump2Change);
+  ArduinoCloud.setPropertyChangedHandler(pump3, onPump3Change);
+
+ // Füge den Handler für die Haupttank-Pumpe hinzu
+  ArduinoCloud.setPropertyChangedHandler(mainTankPump, onMainTankPumpChange);
+
+  ArduinoCloud.addProperty(mainTankPumpOn, READWRITE, ON_CHANGE, onMainTankPumpChange);
+  ArduinoCloud.addProperty(irrigationIntensity, READWRITE, ON_CHANGE, onIrrigationIntensityChange);
+  ArduinoCloud.addProperty(oxygenPumpOn, READWRITE, ON_CHANGE, onOxygenPumpOnOffChange);
+  ArduinoCloud.addProperty(oxygenIntensity, READWRITE, ON_CHANGE, onOxygenIntensityChange);
+}
+
+void loop() {
+  ArduinoIoTCloud.update();
+
+  }
+
+volatile unsigned int pulseCount = 0;
+
+void updateFlow() {
+  pulseCount++;
+}
+
+void updateFlowRate() {
+  flowRate = pulseCount / 7.5; // Annahme: 7,5 Impulse pro Liter
+  pulseCount = 0;
+}
+
+float calculateWaterLevel() {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  long duration = pulseIn(echoPin, HIGH);
+  float distance = (duration / 2) * 0.0344; // Schallgeschwindigkeit in cm/µs
+
+// Umrechnung in Liter basierend auf der Tanktiefe
+  float liters = tankDepth - distance;
+  if (liters < 0) {
+    liters = 0;
+  }
+
+  return liters;
+}
+
+// Funktionen für das Auslesen der Sensoren und Übertragen der Daten
+void readAndSendSensorData() {
+  int moisture1 = analogRead(moistureSensor1Pin);
+  int moisture2 = analogRead(moistureSensor2Pin);
+  int phValue = analogRead(phSensorPin);
+  int ecValue = analogRead(ecSensorPin);
+  int waterTemp = analogRead(waterTempSensorPin);
+
+   // Hier kannst du die Rohdaten in die gewünschten Einheiten umrechnen, falls nötig
+
+  // Übertrage die Werte an die Arduino Cloud
+  ArduinoCloud.sendProperty("moisture1", moisture1);
+  ArduinoCloud.sendProperty("moisture2", moisture2);
+  ArduinoCloud.sendProperty("phValue", phValue);
+  ArduinoCloud.sendProperty("ecValue", ecValue);
+  ArduinoCloud.sendProperty("waterTemp", waterTemp); 
+
+  // Messwerte lesen und übertragen
+  // ...
+}
+
+// Callback-Funktionen, um auf Cloud-Eigenschaftenänderungen zu reagieren
+void onMicroPump1Change() {
+  digitalWrite(microPump1Pin, microPump1On ? HIGH : LOW);
+  if(microPump1On) {
+    delay(5000);
+    digitalWrite(microPump1Pin, LOW);
+    microPump1On = false;
+  }
+}
+
+void onMicroPump2Change() {
+  digitalWrite(microPump2Pin, microPump2On ? HIGH : LOW);
+  if(microPump2On) {
+    delay(5000);
+    digitalWrite(microPump2Pin, LOW);
+    microPump2On = false;
+  }
+}
+
+void onMicroPump3Change() {
+  digitalWrite(microPump3Pin, microPump3On ? HIGH : LOW);
+  if(microPump3On) {
+    delay(5000);
+    digitalWrite(microPump3Pin, LOW);
+    microPump3On = false;
+  }
+}
+
+void onMainTankPumpChange() {
+  digitalWrite(mainTankPumpPin, mainTankPumpOn ? HIGH : LOW);
+  if(mainTankPumpOn) {
+    delay(60000); // Läuft für 1 Minute
+    digitalWrite(mainTankPumpPin, LOW);
+    mainTankPumpOn = false;
+  }
+}
+
+void onIrrigationIntensityChange() {
+  int pwmValue = map(irrigationIntensity, 0, 100, 0, 255);
+  analogWrite(irrigationPumpPin, pwmValue);
+}
+
+void onOxygenPumpOnOffChange() {
+  if (oxygenPumpOn) {
+    int pwmValue = map(oxygenIntensity, 0, 100, 0, 255);
+    analogWrite(oxygenPumpPin, pwmValue);
+  } else {
+    analogWrite(oxygenPumpPin, 0);
+  }
+}
+
+void onOxygenIntensityChange() {
+  if (oxygenPumpOn) {
+    int pwmValue = map(oxygenIntensity, 0, 100, 0, 255);
+    analogWrite(oxygenPumpPin, pwmValue);
+  }
+}
+
+}
+
+void loop() {
+  ArduinoIoTCloud.update();
+  updateFlowRate();
+  pumpWaterToNutrientTank();
+
+  // Deine Haupt-Loop-Logik hier
+
+// Überprüfe, ob es Zeit ist, die Sensoren auszulesen und die Daten zu senden
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval) {
+// Speichere die aktuelle Zeit
+    previousMillis = currentMillis;
+
+// Lese die Sensoren aus und sende die Daten
+    readAndSendSensorData();
+  }
+}
