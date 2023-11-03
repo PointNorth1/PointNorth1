@@ -30,6 +30,7 @@ const long interval = 60000; // Intervall in Millisekunden (60.000 ms = 1 Minute
 bool pump1Activated = false; // Schalter für Mikropumpe 1 (pH Plus)
 bool pump2Activated = false; // Schalter für Mikropumpe 2 (pH Minus)
 bool pump3Activated = false; // Schalter für Mikropumpe 3 (Dünger)
+bool mainTankPumpActivated = false; // Schalter für Haupttank-Pumpe
 
 void onMoistureThresholdChange() {
   int newMoistureThreshold = ArduinoIoTCloud.getProperty(moistureThreshold);
@@ -86,6 +87,9 @@ void setup() {
   ArduinoCloud.setPropertyChangedHandler(pump1, onPump1Change);
   ArduinoCloud.setPropertyChangedHandler(pump2, onPump2Change);
   ArduinoCloud.setPropertyChangedHandler(pump3, onPump3Change);
+
+  // Füge den Handler für die Haupttank-Pumpe hinzu
+  ArduinoCloud.setPropertyChangedHandler(mainTankPump, onMainTankPumpChange);
 }
 
 volatile unsigned int pulseCount = 0;
