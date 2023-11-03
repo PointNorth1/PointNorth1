@@ -15,9 +15,6 @@ const int microPump2Pin = 6;
 const int microPump3Pin = 7;
 const int enrichmentPumpPin = 8;
 
-// Testzeile XXXXXX
-// Testzeile XXX
-
 float flowRate = 0.0; // Gemessener Durchfluss in Litern pro Minute
 
 // Tanktiefe in cm (angepasst an deine tatsächlichen Tankabmessungen)
@@ -129,8 +126,6 @@ void readAndSendSensorData() {
   ArduinoCloud.sendProperty("ecValue", ecValue);
   ArduinoCloud.sendProperty("waterTemp", waterTemp);
 }
-
-
 
 void loop() {
   ArduinoIoTCloud.update();
