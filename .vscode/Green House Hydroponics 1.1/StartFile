@@ -27,6 +27,10 @@ const int echoPin = 10; // Echo-Pin des Ultraschallsensors
 unsigned long previousMillis = 0; // Zum Speichern der letzten Zeit, die die Aktion ausgeführt wurde
 const long interval = 60000; // Intervall in Millisekunden (60.000 ms = 1 Minute)
 
+bool pump1Activated = false; // Schalter für Mikropumpe 1 (pH Plus)
+bool pump2Activated = false; // Schalter für Mikropumpe 2 (pH Minus)
+bool pump3Activated = false; // Schalter für Mikropumpe 3 (Dünger)
+
 void onMoistureThresholdChange() {
   int newMoistureThreshold = ArduinoIoTCloud.getProperty(moistureThreshold);
   // Deine Bewässerungslogik anpassen
@@ -47,24 +51,24 @@ void onPHThresholdChange() {
 void pumpWaterToNutrientTank() {
   float waterLevelLiters = calculateWaterLevel();
 
-  // Überprüfe den Wasserstand im Nährstofftank
+// Überprüfe den Wasserstand im Nährstofftank
   if (waterLevelLiters <= minWaterLevelToPump) {
-    // Schalte die Haupttank-Pumpe ein
+// Schalte die Haupttank-Pumpe ein
     digitalWrite(mainTankPumpPin, HIGH);
   } else if (waterLevelLiters >= 11.0) {
-    // Schalte die Haupttank-Pumpe aus, wenn 11 Liter erreicht sind
+// Schalte die Haupttank-Pumpe aus, wenn 11 Liter erreicht sind
     digitalWrite(mainTankPumpPin, LOW);
   }
 }
 
 void setup() {
-  // Initialisiere den Durchflusssensor
+// Initialisiere den Durchflusssensor
   pinMode(flowSensorPin, INPUT);
   attachInterrupt(digitalPinToInterrupt(flowSensorPin), updateFlow, RISING);
   pinMode(mainTankPumpPin, OUTPUT);
   digitalWrite(mainTankPumpPin, LOW); // Starte die Pumpe ausgeschaltet
 
-  // Initialisiere den Ultraschallsensor
+// Initialisiere den Ultraschallsensor
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
 
@@ -75,8 +79,13 @@ void setup() {
   ArduinoCloud.setPropertyChangedHandler(phLowerThreshold, onPHThresholdChange);
   ArduinoCloud.setPropertyChangedHandler(phUpperThreshold, onPHThresholdChange);
 
-  // Initialisiere die Timer-Variable
+// Initialisiere die Timer-Variable
   previousMillis = millis();
+
+  // Füge die Handler für die Pumpe-Schalter hinzu
+  ArduinoCloud.setPropertyChangedHandler(pump1, onPump1Change);
+  ArduinoCloud.setPropertyChangedHandler(pump2, onPump2Change);
+  ArduinoCloud.setPropertyChangedHandler(pump3, onPump3Change);
 }
 
 volatile unsigned int pulseCount = 0;
@@ -100,7 +109,7 @@ float calculateWaterLevel() {
   long duration = pulseIn(echoPin, HIGH);
   float distance = (duration / 2) * 0.0344; // Schallgeschwindigkeit in cm/µs
 
-  // Umrechnung in Liter basierend auf der Tanktiefe
+// Umrechnung in Liter basierend auf der Tanktiefe
   float liters = tankDepth - distance;
   if (liters < 0) {
     liters = 0;
@@ -109,22 +118,31 @@ float calculateWaterLevel() {
   return liters;
 }
 
-// Funktionen für das Auslesen der Sensoren und Übertragen der Daten
-void readAndSendSensorData() {
-  int moisture1 = analogRead(moistureSensor1Pin);
-  int moisture2 = analogRead(moistureSensor2Pin);
-  int phValue = analogRead(phSensorPin);
-  int ecValue = analogRead(ecSensorPin);
-  int waterTemp = analogRead(waterTempSensorPin);
+void onPump1Change() {
+  pump1Activated = ArduinoIoTCloud.getProperty(pump1);
+  if (pump1Activated) {
+    digitalWrite(microPump1Pin, HIGH);
+    delay(5000); // Pumpe für 5 Sekunden aktivieren
+    digitalWrite(microPump1Pin, LOW); // Pumpe ausschalten
+  }
+}
 
-  // Hier kannst du die Rohdaten in die gewünschten Einheiten umrechnen, falls nötig
+void onPump2Change() {
+  pump2Activated = ArduinoIoTCloud.getProperty(pump2);
+  if (pump2Activated) {
+    digitalWrite(microPump2Pin, HIGH);
+    delay(5000); // Pumpe für 5 Sekunden aktivieren
+    digitalWrite(microPump2Pin, LOW); // Pumpe ausschalten
+  }
+}
 
-  // Übertrage die Werte an die Arduino Cloud
-  ArduinoCloud.sendProperty("moisture1", moisture1);
-  ArduinoCloud.sendProperty("moisture2", moisture2);
-  ArduinoCloud.sendProperty("phValue", phValue);
-  ArduinoCloud.sendProperty("ecValue", ecValue);
-  ArduinoCloud.sendProperty("waterTemp", waterTemp);
+void onPump3Change() {
+  pump3Activated = ArduinoIoTCloud.getProperty(pump3);
+  if (pump3Activated) {
+    digitalWrite(microPump3Pin, HIGH);
+    delay(5000); // Pumpe für 5 Sekunden aktivieren
+    digitalWrite(microPump3Pin, LOW); // Pumpe ausschalten
+  }
 }
 
 void loop() {
@@ -134,13 +152,13 @@ void loop() {
 
   // Deine Haupt-Loop-Logik hier
 
-  // Überprüfe, ob es Zeit ist, die Sensoren auszulesen und die Daten zu senden
+// Überprüfe, ob es Zeit ist, die Sensoren auszulesen und die Daten zu senden
   unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval) {
-    // Speichere die aktuelle Zeit
+// Speichere die aktuelle Zeit
     previousMillis = currentMillis;
 
-    // Lese die Sensoren aus und sende die Daten
+// Lese die Sensoren aus und sende die Daten
     readAndSendSensorData();
   }
 }
