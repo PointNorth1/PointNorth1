@@ -1,0 +1,80 @@
+// ... (vorheriger Code)
+
+// Phase-Namen als Strings
+const char* phaseNames[6] = {
+  "System Ready",
+  "Seeding Phase",
+  "Grow Phase",
+  "Bloom Phase",
+  "Fade Out",
+  "Grow Done"
+};
+
+// Dauer der Phasen in Tagen
+int phaseDurations[6] = {1, 2, 3, 4, 5, 6};
+int currentPhase = 0;
+int currentDayInPhase = 0;
+int totalDays = 0; // Gesamtzahl der Tage seit Beginn des Zeitprogramms
+
+bool timeProgramActive = false; // Zustand des Zeitprogramms
+bool timeProgramPaused = false; // Zustandsvariable, ob das Zeitprogramm pausiert ist
+
+// Variablen für Cloud-Properties
+int timeProgramProgress = 0; // Fortschritt des Zeitprogramms in Prozent
+
+// ... (restlicher vorheriger Code)
+
+void updateTimeProgram() {
+  if (timeProgramActive && !timeProgramPaused) {
+    totalDays++;
+    currentDayInPhase++;
+    int phaseDuration = phaseDurations[currentPhase];
+    if (currentDayInPhase > phaseDuration) {
+      currentPhase = (currentPhase + 1) % 6; // Gehe zur nächsten Phase
+      currentDayInPhase = 1; // Starte die Tage für die nächste Phase
+    }
+    timeProgramProgress = (int)(100.0 * totalDays / (phaseDurations[0] + phaseDurations[1] + phaseDurations[2] + phaseDurations[3] + phaseDurations[4] + phaseDurations[5]));
+
+    // Update Cloud Properties
+    ArduinoCloud.updateProperty("currentDay", totalDays);
+    ArduinoCloud.updateProperty("currentPhase", phaseNames[currentPhase]);
+    ArduinoCloud.updateProperty("timeProgramProgress", timeProgramProgress);
+  }
+}
+
+void onTimeProgramChange() { // Callback wenn der Cloud-Schalter betätigt wird
+  // Aktiviert oder deaktiviert das Zeitprogramm
+  timeProgramActive = !timeProgramActive;
+  timeProgramPaused = false;
+  currentPhase = 0; // Beginne beim ersten Schritt
+  currentDayInPhase = 0;
+  totalDays = 0;
+}
+
+void onPauseResumeProgramChange() { // Callback für Pause/Fortsetzen
+  if (timeProgramActive) {
+    timeProgramPaused = !timeProgramPaused;
+  }
+}
+
+void setup() {
+  // ... (vorheriger setup Code)
+
+  // Hinzufügen der Properties für die Zeitsteuerung
+  ArduinoCloud.addProperty(timeProgramActive, READWRITE, ON_CHANGE, onTimeProgramChange);
+  ArduinoCloud.addProperty(timeProgramPaused, READWRITE, ON_CHANGE, onPauseResumeProgramChange);
+
+  // ... (restlicher vorheriger setup Code)
+}
+
+void loop() {
+  // ... (vorheriger loop Code)
+  
+  if (timeProgramActive && !timeProgramPaused) {
+    updateTimeProgram();
+  }
+
+  // ... (restlicher vorheriger loop Code)
+}
+
+// ... (restlicher Code)

@@ -1,0 +1,77 @@
+#include <ArduinoIoTCloud.h>
+#include <Arduino_ConnectionHandler.h>
+
+// Pin-Definitionen für Sensoren und Pumpen
+// ...
+
+// Variablen für die Cloud-Verbindung
+// ...
+
+// ... (Rest deiner Variablendeklarationen und Konstanten)
+
+// Cloud Properties
+// Hier müssen deine Cloud Properties definiert werden, 
+// diese fehlen im gegebenen Code-Beispiel.
+// Beispiel:
+// int moistureThreshold;
+// float ecLowerThreshold, ecUpperThreshold;
+// float phLowerThreshold, phUpperThreshold;
+
+// Cloud Callbacks
+// Die Funktionen `onMicroPump1Change`, `onMicroPump2Change`, etc. müssen hier deklariert werden.
+// ...
+
+// Funktionsdeklarationen
+void onMoistureThresholdChange();
+void onECThresholdChange();
+void onPHThresholdChange();
+void pumpWaterToNutrientTank();
+void readAndSendSensorData();
+void onMicroPump1Change();
+void onMicroPump2Change();
+void onMicroPump3Change();
+void onMainTankPumpChange();
+void onIrrigationIntensityChange();
+void onOxygenPumpOnOffChange();
+void onOxygenIntensityChange();
+void updateFlow();
+void updateFlowRate();
+float calculateWaterLevel();
+
+void setup() {
+  // Initialisierung der Pins
+  // ...
+
+  // Initialisiere die Arduino IoT Cloud Verbindung
+  // ...
+
+  // Cloud Properties hinzufügen
+  // ...
+
+  // Cloud Callbacks einstellen
+  // ...
+}
+
+void loop() {
+  ArduinoIoTCloud.update();
+  updateFlowRate();
+  pumpWaterToNutrientTank();
+
+  // Zeitbasierte Logik für Sensorauslesung und Datenversand
+  static unsigned long previousMillis = 0; // Statische Variable, um den vorherigen Zeitstempel zu speichern
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis; // Aktualisiere den vorherigen Zeitstempel
+    readAndSendSensorData(); // Funktion, um Sensordaten zu lesen und zu senden
+  }
+
+  // Weitere Loop-Logik kann hier hinzugefügt werden
+  // ...
+}
+
+// Cloud Callback Funktionen
+// ...
+
+// Weitere Funktionsdefinitionen
+// ...
+
