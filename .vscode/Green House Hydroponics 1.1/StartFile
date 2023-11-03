@@ -166,6 +166,15 @@ void onPump3Change() {
   }
 }
 
+void onMainTankPumpChange() {
+  mainTankPumpActivated = ArduinoIoTCloud.getProperty(mainTankPump);
+  if (mainTankPumpActivated) {
+    digitalWrite(mainTankPumpPin, HIGH);
+    delay(60000); // Haupttank-Pumpe für 60 Sekunden (1 Minute) aktivieren
+    digitalWrite(mainTankPumpPin, LOW);
+  }
+}
+
 void loop() {
   ArduinoIoTCloud.update();
   updateFlowRate();
