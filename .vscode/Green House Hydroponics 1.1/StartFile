@@ -118,6 +118,23 @@ float calculateWaterLevel() {
   return liters;
 }
 
+// Funktionen für das Auslesen der Sensoren und Übertragen der Daten
+void readAndSendSensorData() {
+  int moisture1 = analogRead(moistureSensor1Pin);
+  int moisture2 = analogRead(moistureSensor2Pin);
+  int phValue = analogRead(phSensorPin);
+  int ecValue = analogRead(ecSensorPin);
+  int waterTemp = analogRead(waterTempSensorPin);
+
+  // Hier kannst du die Rohdaten in die gewünschten Einheiten umrechnen, falls nötig
+
+  // Übertrage die Werte an die Arduino Cloud
+  ArduinoCloud.sendProperty("moisture1", moisture1);
+  ArduinoCloud.sendProperty("moisture2", moisture2);
+  ArduinoCloud.sendProperty("phValue", phValue);
+  ArduinoCloud.sendProperty("ecValue", ecValue);
+  ArduinoCloud.sendProperty("waterTemp", waterTemp);
+
 void onPump1Change() {
   pump1Activated = ArduinoIoTCloud.getProperty(pump1);
   if (pump1Activated) {
