@@ -1,6 +1,7 @@
-# Überblick
+# Sensor-Modul für Arduino-Projekt
 
-Dieses Sensor-Modul ist Teil eines Arduino-Projekts, das darauf abzielt, Feuchtigkeitsdaten zu erfassen, zu verarbeiten und an verschiedene Dienste wie die Arduino Cloud und eine MariaDB-Datenbank zu senden.
+## Überblick
+Dieses Sensor-Modul ist Teil eines Arduino-Projekts, das darauf abzielt, Feuchtigkeitsdaten zu erfassen, zu verarbeiten und an verschiedene Dienste wie die Arduino Cloud und eine MariaDB-Datenbank zu senden. Es führt regelmäßige Messungen durch und berechnet den Durchschnitt der letzten Messungen.
 
 ## Funktionen
 
@@ -10,6 +11,10 @@ Dieses Sensor-Modul ist Teil eines Arduino-Projekts, das darauf abzielt, Feuchti
 - `sendToCloud(float moistureValue)`: Sendet die Feuchtigkeitswerte an die Arduino Cloud. **Hinweis:** Diese Funktion muss basierend auf dem spezifischen Cloud-Setup konfiguriert werden.
 - `sendToDatabase(float moistureValue)`: Sendet die Feuchtigkeitswerte an eine MariaDB-Datenbank. **Wichtig:** Konfigurationsdetails wie `ssid`, `pass`, `user`, `password` und `INSERT_SQL` müssen korrekt gesetzt werden.
 - `onMoistureThresholdChange()`: Wird aufgerufen, wenn der Feuchtigkeitsschwellenwert in der Cloud geändert wird.
+- `updateMoistureReadings()`: Aktualisiert die Feuchtigkeitsmessungen alle 10 Sekunden.
+- `calculateAverageMoisture()`: Berechnet den Durchschnitt der letzten 6 Messungen und speichert diesen in `averageMoisture`.
+- `averageMoisture`: Speichert den Durchschnittswert der letzten 6 Messungen.
+- `lastMoisture`: Speichert den letzten Messwert.
 
 ## Konfiguration
 
@@ -29,3 +34,8 @@ Stellen Sie sicher, dass alle erforderlichen Bibliotheken in Ihr Arduino-Projekt
 
 - Stellen Sie sicher, dass die Netzwerkverbindung stabil ist.
 - Implementieren Sie eine angemessene Ausnahmebehandlung für alle Netzwerkoperationen, um Ausfälle und Fehler zu handhaben.
+
+## Hinweise zur Nutzung
+
+- Stellen Sie sicher, dass die Funktion `updateMoistureReadings` regelmäßig in Ihrer Haupt-`loop`-Funktion aufgerufen wird, um kontinuierliche Messungen zu gewährleisten.
+- Passen Sie die Messintervalle und die Anzahl der Messungen für den Durchschnittswert nach Bedarf an.
