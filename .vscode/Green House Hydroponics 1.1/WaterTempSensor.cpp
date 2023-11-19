@@ -1,6 +1,21 @@
 #include "TemperatureSensor.h"
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <Arduino.h>
+#include "ArduinoIoTCloud.h"
+#include "WiFiNINA.h"
+#include <MySQL_Connection.h>
+#include <MySQL_Cursor.h>
+
+// Netzwerk-Client
+WiFiClient client;
+
+// Datenbankverbindungsdaten
+const char DB_HOST[] = "IP_der_Datenbank";
+const char DB_USER[] = "Datenbank_Benutzer";
+const char DB_PASS[] = "Datenbank_Passwort";
+
+MySQL_Connection dbConn(&client);
 
 // Ersetzen Sie diese mit Ihren Cloud- und Datenbankverbindungsinformationen
 extern float cloudTemperature;

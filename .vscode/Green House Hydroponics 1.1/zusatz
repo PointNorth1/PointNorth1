@@ -1,0 +1,15 @@
+void TemperatureSensor::sendDataToCloud() {
+    cloudTemperature = _lastTemperatureReading; // Aktualisiert die Cloud-Variable
+    // Fügen Sie hier den Code ein, um die Daten an die Cloud zu senden
+    // Ähnlich wie im ECSensor.cpp
+}
+
+void TemperatureSensor::saveDataToDatabase() {
+    if (dbConn.connected()) {
+        MySQL_Cursor cur = MySQL_Cursor(&dbConn);
+        char query[128];
+        sprintf(query, "INSERT INTO temperature_table (temperature) VALUES (%f)", _lastTemperatureReading);
+        cur.execute(query);
+    }
+    // Implementieren Sie Fehlerbehandlung und Wiederverbindungsversuche ähnlich wie im ECSensor.cpp
+}
